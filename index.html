@@ -3,28 +3,28 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>MT zaterdag</title>
+<title>MT maandag</title>
 <meta name="theme-color" content="#184a3a">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png" type="image/png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="MT zaterdag">
+<meta name="apple-mobile-web-app-title" content="MT maandag">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <script src="config.js"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Figtree:wght@400;500;600&display=swap">
 <style>
 :root {
   --bg: #f3f5f8; --surface: #ffffff; --fg: #172033; --muted: #5d6779; --line: #dde2ea; --accent: #2446a8;
-  --ok: #1d8a4e; --ok-bg: #e3f4ea; --wait: #c46a08; --wait-bg: #fdf0dc; --no: #c2352b; --no-bg: #fbe5e3; --idle-bg: #eef1f5; --part: #6a3fb5; --part-bg: #efe8fb;
+  --ok: #1d8a4e; --ok-bg: #e3f4ea; --wait: #c46a08; --wait-bg: #fdf0dc; --no: #c2352b; --no-bg: #fbe5e3; --idle-bg: #eef1f5; --part: #6a3fb5; --part-bg: #efe8fb; --okpart: #3f9e66; --okpart-bg: #f2fbf5;
   --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
   --body: "Figtree", "Segoe UI", system-ui, sans-serif;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) { :root {
   --bg: #0f141d; --surface: #182030; --fg: #e8ecf3; --muted: #9aa4b6; --line: #2a3446; --accent: #8fa9ff;
-  --ok: #4fd18a; --ok-bg: #143323; --wait: #f4a547; --wait-bg: #3a2810; --no: #ff7a6e; --no-bg: #3d1a17; --idle-bg: #212a3b; --part: #c3a6ff; --part-bg: #2c2245;
+  --ok: #4fd18a; --ok-bg: #143323; --wait: #f4a547; --wait-bg: #3a2810; --no: #ff7a6e; --no-bg: #3d1a17; --idle-bg: #212a3b; --part: #c3a6ff; --part-bg: #2c2245; --okpart: #8fe0b2; --okpart-bg: #18291f;
   color-scheme: dark } }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
@@ -56,7 +56,7 @@ ol.list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 .row.no { background: var(--no-bg); border-left-color: var(--no); } .row.no .state, .row.no .nr { color: var(--no); }
 .row.no .name { text-decoration: line-through; }
 .row.part, .row.partno { background: var(--part-bg); border-left-color: var(--part); } .row.part .state, .row.part .nr, .row.partno .state, .row.partno .nr { color: var(--part); }
-.row.partok { background: var(--ok-bg); border-left-color: var(--part); } .row.partok .state, .row.partok .nr { color: var(--ok); }
+.row.partok { background: var(--okpart-bg); border-left-color: var(--okpart); } .row.partok .state, .row.partok .nr { color: var(--okpart); }
 .row.partno { opacity: .75; }
 .chip.part { background: var(--part-bg); color: var(--part); } .chip.part i { background: var(--part); }
 .btns button.mid { font-size: .82rem; letter-spacing: -.02em; }
@@ -102,7 +102,7 @@ select { font: inherit; color: var(--fg); background: var(--bg); border: 1px sol
 <body>
 <div class="wrap">
   <header>
-    <div class="brand"><img src="icon-192.png" alt="" width="44" height="44"><h1>MT zaterdag</h1></div>
+    <div class="brand"><img src="icon-192.png" alt="" width="44" height="44"><h1>MT maandag</h1></div>
     <p class="when" id="when" hidden>Volgende ontmoeting: <b id="whenDate"></b></p>
     <p class="sub" id="sub">Duid aan of je komt; de lijst schuift vanzelf door.</p>
   </header>
@@ -130,6 +130,7 @@ select { font: inherit; color: var(--fg); background: var(--bg); border: 1px sol
       <button type="button" class="btn danger" id="resetBtn">Nieuwe week starten</button>
       <button type="button" class="btn ghost" id="dateBtn">Enkel datum aanpassen</button>
       <button type="button" class="btn ghost" id="lockBtn">Inschrijvingen afsluiten</button>
+      <button type="button" class="btn wa" id="remindBtn">Reminder sturen</button>
       <button type="button" class="link" id="adminLogout">Afmelden als beheerder</button>
     </div>
     <div id="resetConfirm" class="confirm" hidden>
@@ -331,7 +332,16 @@ $('meSelect').addEventListener('change', e => {
 /* Beheer: de code wordt na één keer aanmelden op dit toestel onthouden */
 let adminCode = null;
 try { adminCode = localStorage.getItem(KEY_ADMIN); } catch (e) {}
+let reminderFile = null;
+function laadReminder() {
+  if (reminderFile) return;
+  fetch('reminder.jpg', { cache: 'no-cache' })
+    .then(r => r.ok ? r.blob() : Promise.reject())
+    .then(b => { reminderFile = new File([b], 'reminder.jpg', { type: 'image/jpeg' }); })
+    .catch(() => {});
+}
 function showAdmin() {
+  if (adminCode) laadReminder();
   $('admin').hidden = !adminCode;
   $('adminLogin').hidden = true;
   $('adminOpen').hidden = !!adminCode;
@@ -391,6 +401,23 @@ $('lockBtn').onclick = () => {
       $('waBtn').hidden = true; $('resetDone').hidden = false;
     })
     .catch(e => { $('lockBtn').disabled = false; showError(e); });
+};
+$('remindBtn').onclick = async () => {
+  $('resetDone').hidden = true;
+  // Enkel de afbeelding via het deelmenu van de telefoon (kies daar WhatsApp en de groep)
+  if (reminderFile && navigator.canShare && navigator.canShare({ files: [reminderFile] })) {
+    try {
+      await navigator.share({ files: [reminderFile] });
+      return;
+    } catch (e) {
+      if (e && e.name === 'AbortError') return; // zelf geannuleerd
+    }
+  }
+  $('resetDoneText').textContent = reminderFile
+    ? 'Dit toestel kan geen afbeelding delen. Gebruik de knop op je smartphone.'
+    : 'De afbeelding is nog niet geladen. Controleer je internetverbinding en probeer opnieuw.';
+  if (!reminderFile) laadReminder();
+  $('waBtn').hidden = true; $('resetDone').hidden = false;
 };
 $('resetBtn').onclick = () => openConfirm('reset');
 $('dateBtn').onclick = () => openConfirm('date');
